@@ -1,6 +1,11 @@
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackQueryHandler, ConversationHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from database import init_db, add_review, get_all_reviews, format_review
 from config import BOT_TOKEN, ADMIN_PANEL_PASSWORD
+
+
+init_db()
+
 
 # Состояния для опроса
 FOOD, STAFF, INTERIOR, COMMENT, FINISH = range(5)
@@ -57,9 +62,12 @@ async def check_password(update, context):
 
 
 async def see_reviews(update, context):
-    reviews = ["Отзыв 1", "Отзыв 2", "Отзыв 3"]
-    for review in reviews:
-        await update.message.reply_text(review)
+    reviews = get_all_reviews()
+    if not reviews:
+        await update.message.reply_text("Пока нет отзывов.")
+    else:
+        for review in reviews:
+            await update.message.reply_text(format_review(review))
     await update.message.reply_text("Что вы хотите сделать дальше?", reply_markup=main_menu)
     return ConversationHandler.END
 
@@ -154,7 +162,12 @@ async def submit_review(update, context):
     await query.answer()
 
     review = context.user_data['review']
-    print(f"Отзыв сохранен: {review}")  # заменить
+    add_review(
+        food=review.get('food', 0),
+        staff=review.get('staff', 0),
+        interior=review.get('interior', 0),
+        comment=review.get('comment')
+    )
 
     await query.edit_message_text(
         "Спасибо за ваш отзыв! Он был успешно отправлен.",
